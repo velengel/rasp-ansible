@@ -1,0 +1,37 @@
+---
+- name: Verify processes
+  hosts: myhosts
+  gather_facts: false
+
+  vars:
+    # 確認したいプロセス名をここに並べる
+    process_names:
+      - nextcloud          # nextcloud
+      - apache2            # web
+      - mariadbd           # db
+      - redis-server       # cache
+      - mackerel-agent     # mackerel
+      - grafana            # grafana
+      - loki               # loki
+
+  tasks:
+    - name: Ping my hosts
+      ansible.builtin.ping:
+
+    - name: Check important processes
+      ansible.builtin.shell: "pgrep -f {{ item }}"
+      register: proc_check
+      ignore_errors: true
+      changed_when: false
+      no_log: true               # PID列などの詳細をログに出さない
+      loop: "{{ process_names }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Show process status (compact)
+      ansible.builtin.debug:
+        msg: "{{ item.item }}: {{ 'running' if item.rc == 0 else 'not running' }}"
+      loop: "{{ proc_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
